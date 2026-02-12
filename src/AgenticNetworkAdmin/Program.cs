@@ -277,12 +277,17 @@ Format your issue comment as a professional report with these sections:
 // ── Run the agent ───────────────────────────────────────────────────────────
 Console.WriteLine($"🔥 Processing firewall request from issue #{issueNumber}...");
 
+Console.WriteLine("📡 Creating Copilot client...");
 await using var client = new GitHub.Copilot.SDK.CopilotClient(new GitHub.Copilot.SDK.CopilotClientOptions
 {
     GithubToken = githubToken
 });
-await client.StartAsync();
 
+Console.WriteLine("📡 Starting Copilot client...");
+await client.StartAsync();
+Console.WriteLine("✅ Copilot client started");
+
+Console.WriteLine("📡 Creating session...");
 await using var session = await client.CreateSessionAsync(new SessionConfig
 {
     Model = "gpt-4.1",
@@ -293,11 +298,13 @@ await using var session = await client.CreateSessionAsync(new SessionConfig
     },
     Tools = [getIssueDetails, checkVirusTotal, checkAzureRbac, applyFirewallRule, commentOnIssue]
 });
+Console.WriteLine("✅ Session created");
 
 var done = new TaskCompletionSource();
 
 session.On(evt =>
 {
+    Console.WriteLine($"📨 Event received: {evt.GetType().Name}");
     switch (evt)
     {
         case AssistantMessageEvent msg:
@@ -314,15 +321,18 @@ session.On(evt =>
             done.TrySetResult();
             break;
         case SessionIdleEvent:
+            Console.WriteLine("💤 Session idle - completing");
             done.TrySetResult();
             break;
     }
 });
 
+Console.WriteLine("📤 Sending message to session...");
 await session.SendAsync(new MessageOptions
 {
     Prompt = $"Process the Azure Firewall rule request in issue #{issueNumber}. Follow the workflow in your instructions."
 });
+Console.WriteLine("✅ Message sent, waiting for completion...");
 
 await done.Task;
 Console.WriteLine("🏁 Agent finished processing.");
