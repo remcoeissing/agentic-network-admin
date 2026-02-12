@@ -1,0 +1,73 @@
+name: "🔥 Azure Firewall Rule Request"
+description: Request a new Azure Firewall application rule
+title: "[Firewall Request] "
+labels: ["firewall-request", "pending-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Azure Firewall Rule Request
+        Please fill in all fields below. Your request will be reviewed by an automated agent.
+
+  - type: input
+    id: fqdn
+    attributes:
+      label: Target FQDN
+      description: The fully qualified domain name to allow (e.g., api.example.com or *.example.com)
+      placeholder: "api.example.com"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: port
+    attributes:
+      label: Destination Port
+      description: The destination port for the rule
+      options:
+        - "443"
+        - "80"
+        - "8443"
+        - "8080"
+        - "Other (specify in justification)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol
+      description: The protocol for the rule
+      options:
+        - "HTTPS"
+        - "HTTP"
+        - "MSSQL"
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: vnet_resource_id
+    attributes:
+      label: Source Virtual Network Resource ID
+      description: "The full Azure resource ID of the source VNet (e.g., /subscriptions/.../virtualNetworks/myVnet)"
+      placeholder: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Network/virtualNetworks/myVnet"
+    validations:
+      required: true
+
+  - type: input
+    id: firewall_policy_id
+    attributes:
+      label: Firewall Policy Resource ID
+      description: "The full Azure resource ID of the Azure Firewall Policy to add the rule to"
+      placeholder: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myRG/providers/Microsoft.Network/firewallPolicies/myPolicy"
+    validations:
+      required: true
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Business Justification
+      description: Explain why this firewall rule is needed and what workload it supports
+      placeholder: "This rule is needed for..."
+    validations:
+      required: true
