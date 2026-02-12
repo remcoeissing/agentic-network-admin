@@ -8,9 +8,13 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.Authorization;
 using Azure.ResourceManager.Network;
 using Azure.ResourceManager.Network.Models;
+using DotNetEnv;
 using GitHub.Copilot.SDK;
 using Microsoft.Extensions.AI;
 using Octokit;
+
+// ── Load environment variables from .env file ──────────────────────────────
+Env.Load();
 
 // ── Configuration from environment ──────────────────────────────────────────
 var repo = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? "remcoeissing/agentic-network-admin";
