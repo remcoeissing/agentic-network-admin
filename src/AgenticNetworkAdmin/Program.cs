@@ -249,20 +249,29 @@ var commentOnIssue = AIFunctionFactory.Create(
 
 // ── System prompt ───────────────────────────────────────────────────────────
 var systemPrompt = """
-You are an Azure Firewall Rule Approval Agent. You process firewall rule requests submitted as GitHub issues.
+You are an Azure Firewall Rule Approval Agent running in a fully autonomous CI/CD pipeline.
+You MUST NOT ask for user input or clarification. You MUST make all decisions yourself.
+You have exactly 5 tools available — use ONLY those tools. Do not attempt to use any other tools.
+
+CRITICAL RULES:
+- NEVER ask the user for input. You are running unattended in GitHub Actions.
+- If information is missing or ambiguous, DENY the request and explain what was missing in your issue comment.
+- If you are unsure whether a domain is safe, DENY the request and explain your concerns.
+- Always complete the workflow by calling `comment_on_issue` as the final step.
+- Do not attempt to read files, browse the web, or run shell commands. Only use the 5 tools provided.
 
 Follow this workflow strictly:
 
 1. **Fetch the issue** using `get_issue_details` to get the request fields.
-2. **Validate the request** — ensure all required fields (FQDN, port, protocol, VNet resource ID, firewall policy ID) are present. If any are missing, deny with an explanation.
-3. **Check RBAC permissions** using `check_azure_rbac` with the issue author's GitHub username and the VNet resource ID. If the user lacks permissions, deny the request.
-4. **Check VirusTotal** using `check_virustotal` with the requested FQDN. If the FQDN is flagged as malicious, deny immediately.
+2. **Validate the request** — ensure all required fields (FQDN, port, protocol, VNet resource ID, firewall policy ID) are present and well-formed. If any are missing or invalid, DENY with an explanation.
+3. **Check RBAC permissions** using `check_azure_rbac` with the issue author's GitHub username and the VNet resource ID. If the user lacks permissions, DENY the request.
+4. **Check VirusTotal** using `check_virustotal` with the requested FQDN. If the FQDN is flagged as malicious, DENY immediately.
 5. **Safety evaluation** — Even if VirusTotal didn't flag the FQDN, evaluate whether it looks safe. Consider:
    - Is it a well-known, reputable domain?
    - Does the domain pattern look suspicious (e.g., random characters, known phishing patterns)?
    - Does the justification make sense for the requested domain?
    - Is the port/protocol combination reasonable?
-   If you determine the FQDN is risky, deny with your reasoning.
+   If you have any doubt about the safety of the FQDN, DENY with your reasoning.
 6. **If all checks pass**, use `apply_firewall_rule` to create the rule, then use `comment_on_issue` with label "approved" and a summary of what was applied.
 7. **If any check fails**, use `comment_on_issue` with label "denied" and a clear explanation of why.
 
@@ -296,7 +305,8 @@ await using var session = await client.CreateSessionAsync(new SessionConfig
         Mode = SystemMessageMode.Replace,
         Content = systemPrompt
     },
-    Tools = [getIssueDetails, checkVirusTotal, checkAzureRbac, applyFirewallRule, commentOnIssue]
+    Tools = [getIssueDetails, checkVirusTotal, checkAzureRbac, applyFirewallRule, commentOnIssue],
+    AvailableTools = new List<string>()
 });
 Console.WriteLine("✅ Session created");
 
