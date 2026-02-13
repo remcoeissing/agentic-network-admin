@@ -286,17 +286,13 @@ Format your issue comment as a professional report with these sections:
 // ── Run the agent ───────────────────────────────────────────────────────────
 Console.WriteLine($"🔥 Processing firewall request from issue #{issueNumber}...");
 
-Console.WriteLine("📡 Creating Copilot client...");
 await using var client = new GitHub.Copilot.SDK.CopilotClient(new GitHub.Copilot.SDK.CopilotClientOptions
 {
     GithubToken = githubToken
 });
-
-Console.WriteLine("📡 Starting Copilot client...");
 await client.StartAsync();
-Console.WriteLine("✅ Copilot client started");
 
-Console.WriteLine("📡 Creating session...");
+Console.WriteLine("📡 Starting agent session...");
 await using var session = await client.CreateSessionAsync(new SessionConfig
 {
     Model = "gpt-4.1",
@@ -308,41 +304,45 @@ await using var session = await client.CreateSessionAsync(new SessionConfig
     Tools = [getIssueDetails, checkVirusTotal, checkAzureRbac, applyFirewallRule, commentOnIssue],
     AvailableTools = new List<string>()
 });
-Console.WriteLine("✅ Session created");
 
 var done = new TaskCompletionSource();
+var timeout = TimeSpan.FromMinutes(5);
 
 session.On(evt =>
 {
-    Console.WriteLine($"📨 Event received: {evt.GetType().Name}");
     switch (evt)
     {
         case AssistantMessageEvent msg:
-            Console.WriteLine($"🤖 {msg.Data.Content}");
+            Console.WriteLine($"🤖 Agent: {msg.Data.Content}");
             break;
         case ToolExecutionStartEvent tool:
-            Console.WriteLine($"🔧 Calling tool: {tool.Data.ToolName}");
+            Console.WriteLine($"🔧 Tool → {tool.Data.ToolName}");
             break;
-        case ToolExecutionCompleteEvent tool:
-            Console.WriteLine($"✅ Tool complete");
+        case ToolExecutionCompleteEvent:
+            Console.WriteLine($"  ✅ Done");
             break;
         case SessionErrorEvent err:
             Console.Error.WriteLine($"❌ Error: {err.Data.Message}");
             done.TrySetResult();
             break;
         case SessionIdleEvent:
-            Console.WriteLine("💤 Session idle - completing");
             done.TrySetResult();
             break;
     }
 });
 
-Console.WriteLine("📤 Sending message to session...");
+Console.WriteLine($"🔥 Sending prompt to agent...");
 await session.SendAsync(new MessageOptions
 {
     Prompt = $"Process the Azure Firewall rule request in issue #{issueNumber}. Follow the workflow in your instructions."
 });
-Console.WriteLine("✅ Message sent, waiting for completion...");
 
-await done.Task;
-Console.WriteLine("🏁 Agent finished processing.");
+if (await Task.WhenAny(done.Task, Task.Delay(timeout)) == done.Task)
+{
+    Console.WriteLine("🏁 Agent finished processing.");
+}
+else
+{
+    Console.Error.WriteLine("⏰ Agent timed out after 5 minutes.");
+    Environment.ExitCode = 1;
+}
